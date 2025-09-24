@@ -1,125 +1,115 @@
-/*                                                                   ********** CONSEGNA **********
-                UTILIZZANDO IL LINGUAGGIO C REALIZZARE UN PROGRAMMA CHE DATA IN INPUT UNA MATRICE 3X3, NE RESTITUISCA L'INVERSA IN OUTPUT CON ANNESSA VERIFICA TRAMITE MATRICE IDENTICA
-
-                Autore: Elian Alderuccio
+/*
+	********** ASSIGNMENT **********
+	Using the C programming language, develop a program that,
+	given a 3x3 matrix as input, computes its inverse as output,
+	and verifies the result by multiplying it with the original matrix (Identity).
 */
 
 #include <stdio.h>
-#include<math.h>
-#include<windows.h>
+#include <stdlib.h>
+#include <math.h>
 
-void Inserimento(float M[3][3], int i, int j);
-void Calcolo(float M[3][3], float MA[3][3], float MID[3][3], int i, int j);
-void Stampa(float M[3][3], float MA[3][3], float MID[3][3], int i, int j);
+#define N 3
+#define EPS 1e-9
+
+typedef double Mat3[N][N];
+
+static void read_matrix(Mat3 A);
+static void print_matrix(const char *title, const Mat3 A);
+static double det3(const Mat3 A);
+static void cofactor3(const Mat3 A, Mat3 C);
+static void transpose3(const Mat3 A, Mat3 AT);
+static int inverse3(const Mat3 A, Mat3 inv);        // ritorna 0 se non invertibile
+static void mul3(const Mat3 A, const Mat3 B, Mat3 R);
 
 int main(void) {
-    //DICHIARAZIONE VARIABILI
-    float M[3][3], MA[3][3], MID[3][3];
-    int i = 0, j = 0;
+    Mat3 A, Ainv, I;
 
-	//RICHIAMO FUNZIONI DEL PROGRAMMA
-    Inserimento(M,i,j);
-    Calcolo(M,MA,MID,i,j);
-    getch();
+    read_matrix(A);
+
+    if (!inverse3(A, Ainv)) {
+        puts("\nDeterminant is ~0 -> matrix is not invertible.");
+        return 0;
+    }
+
+    mul3(A, Ainv, I);
+
+    print_matrix("\nInput matrix A", A);
+    print_matrix("\nInverse A^{-1}", Ainv);
+    print_matrix("\nCheck A * A^{-1} (should be I)", I);
+
+    return 0;
 }
 
-
-void Inserimento(float M[3][3], int i, int j){
-	//INSERIMENTO DELLA MATRICE DA PARTE DELL'UTENTE
-	printf("Inserire i valori della matrice\n");
-    for (i = 0; i < 3; i++) {
-        for (j = 0; j < 3; j++) {
-            printf("\nInserisci elemento di riga %d e colonna %d: ", i, j);
-            scanf("%f", &M[i][j]);
-        }
-    }                
-}
-
-
-void Calcolo(float M[3][3], float MA[3][3], float MID[3][3], int i, int j){
-	//DICHIARAZIONE VARIABILI
-	int k = 0;
-	float determinante, A00, A01, A02, A10, A11, A12, A20, A21, A22;
-	
-    determinante = (M[0][0] * M[1][1] * M[2][2]) + (M[0][1] * M[1][2] * M[2][0]) + (M[0][2] * M[1][0] * M[2][1]) - (M[0][1] * M[1][0] * M[2][2]) - (M[0][0] * M[1][2] * M[2][1]) - (M[0][2] * M[1][1] * M[2][0]);
-
-    //CONDIZIONE NECESSARIA PER TROVARE LA MATRICE INVERSA
-    if (determinante == 0){
-        printf("\n\nIl determinante e'uguale a zero quindi la matrice inversa non e' calcolabile\n");
-        printf("Grazie e arrivederci!");
-        return;
-	}else {
-        //CALCOLO COMPLEMENTI ALGEBRICI DELLA MATRICE
-        A00 = ((pow(-1,0)) * ((M[1][1] * M[2][2]) - (M[1][2] * M[2][1])));
-        A01 = ((pow(-1,1)) * ((M[1][0] * M[2][2]) - (M[1][2] * M[2][0])));
-        A02 = ((pow(-1,2)) * ((M[1][0] * M[2][1]) - (M[1][1] * M[2][0])));
-        A10 = ((pow(-1,1)) * ((M[0][1] * M[2][2]) - (M[0][2] * M[2][1])));
-        A11 = ((pow(-1,2)) * ((M[0][0] * M[2][2]) - (M[0][2] * M[2][0])));
-        A12 = ((pow(-1,3)) * ((M[0][0] * M[2][1]) - (M[0][1] * M[2][0])));
-        A20 = ((pow(-1,2)) * ((M[0][1] * M[1][2]) - (M[0][2] * M[1][1])));
-        A21 = ((pow(-1,3)) * ((M[0][0] * M[1][2]) - (M[0][2] * M[1][0])));
-        A22 = ((pow(-1,4)) * ((M[0][0] * M[1][1]) - (M[0][1] * M[1][0])));
-
-        //COSTRUZIONE DELLA MATRICE INVERSA DIVIDENDO OGNI COMPLEMENTO ALGEBRICO PER IL DETERMINANTE DELLA MATRICE DI PARTENZA
-        MA[0][0] = (A00 / determinante);
-        MA[0][1] = (A10 / determinante);
-        MA[0][2] = (A20 / determinante);
-        MA[1][0] = (A01 / determinante);
-        MA[1][1] = (A11 / determinante);
-        MA[1][2] = (A21 / determinante);
-        MA[2][0] = (A02 / determinante);
-        MA[2][1] = (A12 / determinante);
-        MA[2][2] = (A22 / determinante);
-
-        //PRODOTTO TRA MATRICI PER COSTRUIRE LA MATRICE IDENTICA CHE AVRA' FUNZIONE DI VERIFICA
-        for (i = 0; i < 3; i++) {
-            for (j = 0; j < 3; j++) {
-                MID[i][j] = 0;
-                for (k = 0; k < 3; k++) {
-                    MID[i][j] = MID[i][j] + M[i][k] * MA[k][j];
-                }
+static void read_matrix(Mat3 A) {
+    puts("Enter the 9 values of the 3x3 matrix (row by row):");
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            while (1) {
+                printf("A[%d][%d] = ", i+1, j+1);
+                if (scanf("%lf", &A[i][j]) == 1) break;
+                puts("Invalid number. Try again.");
+                int c; while ((c = getchar()) != '\n' && c != EOF) {}
             }
         }
-        //RICHIAMO ALLA FUNZIONE CHE STAMPA LE MATRICI
-        Stampa(M,MA,MID,i,j);   
     }
 }
 
-void Stampa(float M[3][3], float MA[3][3], float MID[3][3], int i, int j){
-	//COMANDO CHE PULISCE LO SCHERMO
-    system("cls");
-    printf("Resoconto matrici:\n\n");
-
-	//STAMPA MATRICE INSERITA IN INPUT
-    printf("\n\nLa matrice inserita e':\n");
-    for (i = 0; i < 3; i++) {
-        printf("\n");
-        for (j = 0; j < 3; j++) {
-            printf("%5f     ", M[i][j]);
-        }
-	}
-    printf("\n\n\n\n");
-    
-    
-    //STAMPA MATRICE INVERSA
-    printf("\n\nLa matrice inversa e':\n");
-    for (i = 0; i < 3; i++) {
-        printf("\n");
-        for (j = 0; j < 3; j++) {
-            printf("%5f     ", MA[i][j]);
-        }
+static void print_matrix(const char *title, const Mat3 A) {
+    puts(title);
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j)
+            printf("%10.6f ", A[i][j]);
+        putchar('\n');
     }
-    printf("\n\n\n\n");
-    
-    
-    //STAMPA MATRICE IDENTICA
-    printf("\n\nLa matrice identica e':\n");
-    for (i = 0; i < 3; i++) {
-        printf("\n");
-        for (j = 0; j < 3; j++) {
-            printf("%5f     ", MID[i][j]);
-        }
-	}
-    printf("\n\n\n\n");
 }
 
+static double det3(const Mat3 M) {
+    return
+        M[0][0]*(M[1][1]*M[2][2] - M[1][2]*M[2][1]) -
+        M[0][1]*(M[1][0]*M[2][2] - M[1][2]*M[2][0]) +
+        M[0][2]*(M[1][0]*M[2][1] - M[1][1]*M[2][0]);
+}
+
+static void cofactor3(const Mat3 A, Mat3 C) {
+    C[0][0] = +(A[1][1]*A[2][2] - A[1][2]*A[2][1]);
+    C[0][1] = -(A[1][0]*A[2][2] - A[1][2]*A[2][0]);
+    C[0][2] = +(A[1][0]*A[2][1] - A[1][1]*A[2][0]);
+
+    C[1][0] = -(A[0][1]*A[2][2] - A[0][2]*A[2][1]);
+    C[1][1] = +(A[0][0]*A[2][2] - A[0][2]*A[2][0]);
+    C[1][2] = -(A[0][0]*A[2][1] - A[0][1]*A[2][0]);
+
+    C[2][0] = +(A[0][1]*A[1][2] - A[0][2]*A[1][1]);
+    C[2][1] = -(A[0][0]*A[1][2] - A[0][2]*A[1][0]);
+    C[2][2] = +(A[0][0]*A[1][1] - A[0][1]*A[1][0]);
+}
+
+static void transpose3(const Mat3 A, Mat3 AT) {
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            AT[j][i] = A[i][j];
+}
+
+static int inverse3(const Mat3 A, Mat3 inv) {
+    double d = det3(A);
+    if (fabs(d) < EPS) return 0;
+
+    Mat3 C, adj;
+    cofactor3(A, C);
+    transpose3(C, adj);      // adjugate
+
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            inv[i][j] = adj[i][j] / d;
+
+    return 1;
+}
+
+static void mul3(const Mat3 A, const Mat3 B, Mat3 R) {
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j) {
+            R[i][j] = 0.0;
+            for (int k = 0; k < N; ++k) R[i][j] += A[i][k] * B[k][j];
+        }
+}
